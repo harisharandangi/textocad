@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "textocad"
-version = "0.1.0"
+version = "1.0.0"
 description = "Text to parametric CAD: turn a plain-English prompt into an editable CadQuery or OpenSCAD model and export STEP, STL and GLB."
 readme = "README.md"
 license = { text = "PolyForm-Noncommercial-1.0.0" }
