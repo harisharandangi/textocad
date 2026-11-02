@@ -1,0 +1,1724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TextoCAD</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<script>
+  (function () {
+    let pref = "system";
+    try { pref = JSON.parse(localStorage.getItem("textocad.theme")) || "system"; } catch (e) {}
+    const dark = pref === "dark" || (pref === "system" && !matchMedia("(prefers-color-scheme: light)").matches);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --s0: #070709; --s1: #0b0b0f; --s2: #101015; --s3: #16161d; --s4: #1d1d26;
+    --line: rgba(255,255,255,.08); --line2: rgba(255,255,255,.16);
+    --text: #e8eaee; --muted: rgba(255,255,255,.55); --faint: rgba(255,255,255,.35);
+    --brand: #2563eb; --brand2: #3b82f6; --brand3: #60a5fa; --brand-soft: rgba(37,99,235,.16);
+    --robot: #8b5cf6; --robot-soft: rgba(139,92,246,.14);
+    --ok: #34d399; --error: #f87171; --error-soft: rgba(248,113,113,.1);
+    --wash: radial-gradient(circle at 50% 45%, #111827 0%, #050505 62%, #000 100%);
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --float: rgba(11,11,15,.82); --hover: rgba(255,255,255,.07); --edge: rgba(255,255,255,.22);
+    --robot-text: #ddd6fe; --error-text: #fecaca;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --s0: #eef1f6; --s1: #ffffff; --s2: #f7f8fb; --s3: #eef1f5; --s4: #e4e8ef;
+    --line: rgba(15,23,42,.1); --line2: rgba(15,23,42,.18);
+    --text: #0f172a; --muted: rgba(15,23,42,.64); --faint: rgba(15,23,42,.46);
+    --brand3: #1d4ed8; --brand-soft: rgba(37,99,235,.1); --robot-soft: rgba(139,92,246,.12);
+    --error: #dc2626; --error-soft: rgba(220,38,38,.07);
+    --wash: radial-gradient(circle at 50% 45%, #ffffff 0%, #eef2f7 60%, #e2e8f0 100%);
+    --float: rgba(255,255,255,.9); --hover: rgba(15,23,42,.06); --edge: rgba(15,23,42,.2);
+    --robot-text: #6d28d9; --error-text: #b91c1c;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--s0); color: var(--text); font: 14px/1.45 var(--sans); overflow: hidden; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--brand3); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  :focus-visible { outline: 2px solid var(--brand3); outline-offset: 2px; }
+
+  .app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  .top {
+    height: 48px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+    background: var(--s1); border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: -.01em; }
+  .brand img { width: 26px; height: 26px; display: block; }
+  .icon-btn { width: 30px; height: 30px; padding: 0; justify-content: center; }
+  .top .title { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .top .spacer { flex: 1; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500;
+    padding: 5px 10px; border-radius: 999px; background: var(--s3); border: 1px solid var(--line); white-space: nowrap;
+    text-decoration: none; color: var(--text);
+  }
+  .chip:hover { border-color: var(--line2); }
+  .chip.missing { border-color: var(--brand2); color: var(--brand3); background: var(--brand-soft); }
+  .dlmenu {
+    position: fixed; top: 54px; right: 14px; z-index: 40; width: 330px; max-width: calc(100vw - 28px); padding: 12px;
+    background: var(--s2); border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.4);
+  }
+  .dlmenu h4 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+  .dlmenu .seg { display: flex; gap: 4px; margin-bottom: 10px; }
+  .dlmenu .seg button { flex: 1; border: 1px solid var(--line); background: var(--s3); color: var(--muted); border-radius: 7px; padding: 5px 4px; font-size: 12px; }
+  .dlmenu .seg button.on { border-color: var(--brand2); background: var(--brand-soft); color: var(--brand3); }
+  .dlmenu .seg button:disabled { opacity: .4; cursor: default; }
+  .dlmenu .files { margin-bottom: 10px; }
+  .dlmenu .file { width: 100%; text-align: left; cursor: pointer; }
+  .dlmenu .file:disabled { opacity: .4; cursor: default; }
+  .dlmenu .file:disabled:hover { border-color: var(--line); background: var(--s3); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  .chip.missing .dot { background: var(--brand3); }
+
+  .work { flex: 1; min-height: 0; display: grid; grid-template-columns: 290px minmax(320px, 1fr) 380px; }
+  .panel { background: var(--s2); min-height: 0; display: flex; flex-direction: column; }
+  #left { border-right: 1px solid var(--line); }
+  #right { border-left: 1px solid var(--line); }
+  .phead {
+    flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 12px 14px; border-bottom: 1px solid var(--line);
+  }
+  .phead h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .pbody { flex: 1; min-height: 0; overflow: auto; padding: 14px; }
+  .note { color: var(--faint); font-size: 13px; }
+  .section { margin-bottom: 22px; }
+  .section > h3 { margin: 0 0 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+
+  .card { background: var(--s3); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .model-title { font-weight: 600; margin-bottom: 6px; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 12px; }
+  .facts dt { color: var(--faint); }
+  .facts dd { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge {
+    display: inline-block; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    padding: 2px 7px; border-radius: 5px; background: var(--brand-soft); color: var(--brand3);
+  }
+  .badge.robotics { background: var(--robot-soft); color: var(--robot-text); }
+
+  .param { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .param:last-child { border-bottom: 0; }
+  .param .top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+  .param .top-row label { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .param .num {
+    width: 84px; flex: none; display: flex; align-items: center; gap: 4px; background: var(--s1);
+    border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px;
+  }
+  .param .num input { width: 100%; border: 0; background: transparent; font-family: var(--mono); font-size: 12px; text-align: right; outline: none; padding: 2px 0; }
+  .param .num span { color: var(--faint); font-size: 11px; }
+  .param input[type=text] { width: 140px; background: var(--s1); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+  input[type=range] { width: 100%; accent-color: var(--brand2); margin: 8px 0 0; }
+  .param.changed .top-row label { color: var(--brand3); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; border: 1px solid transparent;
+    padding: 8px 12px; font-weight: 600; font-size: 13px; background: var(--brand); color: #fff;
+  }
+  .btn:hover { background: var(--brand2); }
+  .btn:disabled { opacity: .5; cursor: progress; }
+  .btn.ghost { background: transparent; border-color: var(--line); color: var(--text); font-weight: 500; }
+  .btn.ghost:hover { background: var(--hover); border-color: var(--line2); }
+  .btn.small { padding: 5px 9px; font-size: 12px; }
+  .btn.block { width: 100%; }
+  .row { display: flex; gap: 8px; }
+  .row > .btn { flex: 1; }
+
+  .files { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .file {
+    display: block; text-decoration: none; color: var(--text); background: var(--s3); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .file:hover { border-color: var(--brand2); background: var(--brand-soft); }
+  .file b { display: block; font-family: var(--mono); font-size: 12px; font-weight: 500; }
+  .file span { font-size: 11px; color: var(--faint); }
+
+  #stage { position: relative; min-width: 0; min-height: 0; background: var(--wash); overflow: hidden; }
+  #viewer { position: absolute; inset: 0; }
+  #viewer canvas { display: block; touch-action: none; }
+  .float {
+    position: absolute; z-index: 5; background: var(--float); border: 1px solid var(--line);
+    border-radius: 10px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 12px 40px rgba(0,0,0,.45);
+  }
+  .toolbar { top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; max-width: calc(100% - 250px); overflow-x: auto; scrollbar-width: none; }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .tool {
+    flex: none; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 9px; border: 0; border-radius: 7px;
+    background: transparent; color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .tool:hover { background: var(--hover); color: var(--text); }
+  .tool.on { background: var(--brand); color: #fff; }
+  .tool svg { width: 16px; height: 16px; flex: none; }
+  .sep { width: 1px; margin: 6px 3px; background: var(--line2); flex: none; }
+
+  .gizmo { top: 12px; right: 12px; width: 96px; padding: 4px; }
+  .gizmo svg { display: block; width: 88px; height: 88px; }
+  .gizmo circle.hit { cursor: pointer; }
+  .gizmo text { font: 600 10px var(--sans); fill: #0b0b0f; pointer-events: none; }
+  .views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 4px; }
+  .views button { border: 0; background: transparent; color: var(--muted); font-size: 10.5px; padding: 3px 0; border-radius: 5px; }
+  .views button:hover { background: var(--hover); color: var(--text); }
+
+  .zoom { right: 12px; bottom: 54px; display: flex; flex-direction: column; padding: 3px; gap: 2px; }
+  .zoom .tool { width: 32px; justify-content: center; padding: 0; }
+
+  .dock { left: 12px; bottom: 12px; display: flex; gap: 2px; padding: 3px; }
+  .readout {
+    position: absolute; right: 12px; bottom: 14px; z-index: 4; font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+    background: var(--float); border: 1px solid var(--line); padding: 4px 9px; border-radius: 7px; pointer-events: none;
+  }
+  .hint { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 3; font-size: 11.5px; color: var(--faint); pointer-events: none; white-space: nowrap; }
+  .picked {
+    position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 4; font-size: 12px;
+    background: var(--brand); color: #fff; padding: 3px 10px; border-radius: 999px; pointer-events: none;
+  }
+
+  .fpanel { bottom: 56px; left: 12px; width: 290px; max-height: calc(100% - 130px); display: flex; flex-direction: column; }
+  .fpanel .fhead { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 13px; }
+  .fpanel .fbody { overflow: auto; padding: 10px 12px 12px; }
+  .x { border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .x:hover { color: var(--text); }
+  .part { display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 7px; }
+  .part:hover { background: var(--hover); }
+  .part.sel { background: var(--brand-soft); }
+  .part input[type=checkbox] { accent-color: var(--brand2); margin: 0; }
+  .part .sw { position: relative; width: 14px; height: 14px; border-radius: 4px; flex: none; border: 1px solid var(--edge); overflow: hidden; }
+  .part .sw input { position: absolute; inset: -6px; opacity: 0; cursor: pointer; }
+  .part .nm { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; padding: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .part .dim { font-family: var(--mono); font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+  .lk { display: block; margin-bottom: 12px; font-size: 12px; color: var(--muted); }
+  .lk > span { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .lk select { width: 100%; background: var(--s3); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font-size: 13px; color: var(--text); }
+  .lk input[type=range] { margin: 0; }
+  .lk.check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
+  .lk.check input { accent-color: var(--brand2); margin: 0; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatches button { width: 20px; height: 20px; border-radius: 5px; border: 1px solid var(--edge); padding: 0; }
+  .swatches button.on { outline: 2px solid var(--brand3); outline-offset: 1px; }
+  .swatches .reset { width: auto; padding: 0 8px; font-size: 11px; background: var(--s3); color: var(--muted); }
+
+  .joints { top: 172px; right: 12px; width: 300px; max-height: calc(100% - 230px); display: flex; flex-direction: column; border-color: rgba(139,92,246,.35); }
+  .joints .fhead { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 13px; }
+  .joints .fbody { overflow: auto; padding: 10px 12px 12px; }
+  .joints .ctl { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .joints .ctl .btn { flex: none; }
+  .joints .ctl input { flex: 1; accent-color: var(--robot); margin: 0; }
+  .btn.robot { background: var(--robot); }
+  .btn.robot:hover { background: #a78bfa; }
+  .joint { background: var(--hover); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .joint .jt { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; font-weight: 500; }
+  .joint .jt small { color: var(--faint); font-weight: 400; }
+  .joint .val { font-family: var(--mono); font-size: 11px; color: var(--robot-text); background: var(--robot-soft); padding: 1px 6px; border-radius: 5px; }
+  .joint input { accent-color: var(--robot); }
+  .movebtn { top: 172px; right: 12px; }
+
+  .empty { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; text-align: center; padding: 24px; }
+  .empty div { max-width: 340px; color: var(--faint); }
+  .empty svg { color: rgba(96,165,250,.45); margin-bottom: 10px; }
+  .empty b { display: block; color: var(--muted); font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .building {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 6; display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; font-size: 13px;
+  }
+  .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line2); border-top-color: var(--brand3); animation: spin .8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .chat { flex: 1; min-height: 0; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .intro h3 { margin: 6px 0 4px; font-size: 16px; font-weight: 600; }
+  .intro p { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+  .examples { display: flex; flex-direction: column; gap: 6px; }
+  .examples button {
+    text-align: left; border: 1px solid var(--line); background: var(--s3); border-radius: 9px; padding: 8px 10px; font-size: 13px; color: var(--text);
+  }
+  .examples button:hover { border-color: var(--brand2); background: var(--brand-soft); }
+  .examples small { display: block; color: var(--faint); font-size: 11px; margin-top: 1px; }
+  .msg { max-width: 92%; border-radius: 12px; padding: 9px 12px; font-size: 13.5px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--brand); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.user small { display: block; opacity: .7; font-size: 11px; margin-top: 2px; }
+  .msg.ai { align-self: flex-start; background: var(--s3); border: 1px solid var(--line); border-bottom-left-radius: 4px; white-space: normal; }
+  .msg.ai.err { background: var(--error-soft); border-color: rgba(248,113,113,.3); color: var(--error-text); }
+  .msg.ai .meta { color: var(--faint); font-size: 11.5px; margin-top: 3px; }
+  .msg.ai .acts { display: flex; gap: 6px; margin-top: 8px; }
+  .msg.ai.busy { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+
+  .composer { flex: none; border-top: 1px solid var(--line); padding: 10px 12px 12px; background: var(--s2); }
+  .modes { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  .modes button {
+    border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted);
+  }
+  .modes button:hover { color: var(--text); border-color: var(--line2); }
+  .modes button.on { background: var(--brand-soft); border-color: var(--brand2); color: var(--brand3); }
+  .editing {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted);
+    background: var(--s3); border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px 5px 10px; margin-bottom: 8px;
+  }
+  .editing b { color: var(--text); font-weight: 500; }
+  .box { background: var(--s1); border: 1px solid var(--line2); border-radius: 12px; padding: 8px; }
+  .box:focus-within { border-color: var(--brand2); }
+  .box textarea { width: 100%; min-height: 64px; max-height: 220px; resize: none; border: 0; outline: none; background: transparent; padding: 2px 4px; font-size: 14px; }
+  .box .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .box label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .box label input { accent-color: var(--brand2); margin: 0; }
+  .send { width: 34px; height: 34px; padding: 0; border-radius: 9px; }
+  .btn.stop { background: var(--error); color: #fff; }
+  .btn.stop:hover { background: #ef4444; }
+  .building .btn { margin-left: 4px; }
+
+  .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 16px; }
+  .dialog { width: 420px; max-width: 100%; background: var(--s2); border: 1px solid var(--line2); border-radius: 14px; padding: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .dialog h2 { margin: 0 0 4px; font-size: 17px; }
+  .dialog p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+  .dialog label.f { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; }
+  .dialog input, .dialog select { width: 100%; background: var(--s1); border: 1px solid var(--line2); border-radius: 8px; padding: 9px 10px; font-size: 14px; }
+  .dialog details { margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .dialog summary { cursor: pointer; }
+  .dialog .acts { display: flex; gap: 8px; margin-top: 16px; }
+  .dialog .acts .btn { flex: 1; }
+  .status { min-height: 18px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+  .status.error { color: var(--error); }
+
+  .tabs { display: none; }
+  @media (max-width: 1100px) {
+    .work { grid-template-columns: 250px minmax(300px, 1fr) 330px; }
+  }
+  @media (max-width: 900px) {
+    .work { display: block; position: relative; }
+    .work > *, #stage { position: absolute; inset: 0; }
+    #left, #right { border: 0; z-index: 10; }
+    .work[data-tab="model"] #left, .work[data-tab="model"] #right,
+    .work[data-tab="ai"] #left, .work[data-tab="sliders"] #right { display: none; }
+    .tabs { display: flex; flex: none; background: var(--s1); border-top: 1px solid var(--line); }
+    .tabs button { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 8px 0 10px; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .tabs button.on { color: var(--brand3); }
+    .top .title, .hint, .zoom { display: none; }
+    .toolbar { left: 12px; transform: none; max-width: calc(100% - 128px); }
+    .tool .lbl { display: none; }
+    .fpanel { width: auto; right: 12px; max-height: 55%; }
+    .joints { top: auto; bottom: 56px; left: 12px; right: 12px; width: auto; max-height: 45%; }
+    .movebtn { top: auto; bottom: 12px; right: 12px; }
+    .readout { bottom: 56px; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <img src="/logo.png" alt="">
+      TextoCAD
+    </div>
+    <div id="topTitle" class="title"></div>
+    <div class="spacer"></div>
+    <button id="keyChip" class="chip" type="button" hidden><span class="dot"></span><span id="keyText"></span></button>
+    <button id="dlBtn" class="btn small" type="button" disabled title="Download the model"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download</button>
+    <button id="themeBtn" class="chip icon-btn" type="button"></button>
+    <a class="chip" href="https://textocad.com" target="_blank" rel="noopener">textocad.com ↗</a>
+  </header>
+
+  <div id="work" class="work" data-tab="ai">
+    <aside id="left" class="panel">
+      <div class="phead"><h2>Model</h2></div>
+      <div class="pbody">
+        <div id="noModel" class="note">Parameters, parts and downloads show up here after your first model.</div>
+        <div id="modelBox" class="section" hidden>
+          <div class="card">
+            <div class="model-title" id="mTitle"></div>
+            <dl class="facts" id="mFacts"></dl>
+          </div>
+        </div>
+        <div id="paramsBox" class="section" hidden>
+          <h3>Parameters</h3>
+          <div id="params"></div>
+          <div class="row" style="margin-top:10px">
+            <button id="rebuild" class="btn" type="button">Rebuild</button>
+            <button id="resetParams" class="btn ghost" type="button">Reset</button>
+          </div>
+          <div id="paramStatus" class="status"></div>
+        </div>
+        <div id="paramsNote" class="section note" hidden></div>
+        <div id="filesBox" class="section" hidden>
+          <h3>Download</h3>
+          <div id="files" class="files"></div>
+        </div>
+      </div>
+    </aside>
+
+    <main id="stage">
+      <div id="viewer"></div>
+      <div id="empty" class="empty"><div>
+        <b>Describe a part to start</b>
+        Type what you need in the chat. Your model shows up here, ready to turn, measure and download.
+      </div></div>
+
+      <div class="float toolbar" id="toolbar">
+        <button class="tool on" data-tool="orbit" title="Rotate with the left mouse button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg><span class="lbl">Orbit</span></button>
+        <button class="tool" data-tool="pan" title="Pan with the left mouse button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span class="lbl">Pan</span></button>
+        <div class="sep"></div>
+        <button class="tool" id="fitBtn" title="Fit the model in view (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="lbl">Fit</span></button>
+        <button class="tool" id="orthoBtn" title="Orthographic view (O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 12h16M12 4v16"/></svg><span class="lbl">Ortho</span></button>
+        <button class="tool" id="edgesBtn" title="Show edges (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg><span class="lbl">Edges</span></button>
+        <button class="tool" id="xrayBtn" title="See through the model (X)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg><span class="lbl">X-ray</span></button>
+        <button class="tool" id="gridBtn" title="Ground grid (G)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg><span class="lbl">Grid</span></button>
+        <button class="tool" id="spinBtn" title="Turn the model slowly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M17 6.5l2 1.7-2.4 1"/></svg><span class="lbl">Spin</span></button>
+        <button class="tool" id="shotBtn" title="Save a picture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span class="lbl">Image</span></button>
+      </div>
+
+      <div class="float gizmo">
+        <svg id="axes" viewBox="-44 -44 88 88"></svg>
+        <div class="views">
+          <button data-view="iso">Iso</button><button data-view="top">Top</button><button data-view="front">Front</button>
+          <button data-view="right">Right</button><button data-view="left">Left</button><button data-view="back">Back</button>
+        </div>
+      </div>
+
+      <div class="float zoom">
+        <button class="tool" id="zoomIn" title="Zoom in">+</button>
+        <button class="tool" id="zoomOut" title="Zoom out">−</button>
+      </div>
+
+      <div class="float dock" id="dock" hidden>
+        <button class="tool" data-panel="partsPanel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Parts <span id="partCount" style="opacity:.6"></span></button>
+        <button class="tool" data-panel="lookPanel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Look</button>
+      </div>
+
+      <div class="float fpanel" id="partsPanel" hidden>
+        <div class="fhead">Parts <button class="x" data-close>×</button></div>
+        <div class="fbody">
+          <div class="row" style="margin-bottom:8px">
+            <button class="btn ghost small" id="showAll" type="button">Show all</button>
+            <button class="btn ghost small" id="isolate" type="button">Show only picked</button>
+          </div>
+          <div id="partList"></div>
+        </div>
+      </div>
+
+      <div class="float fpanel" id="lookPanel" hidden>
+        <div class="fhead">Look <button class="x" data-close>×</button></div>
+        <div class="fbody">
+          <label class="lk"><span>Lighting</span><select id="lighting"></select></label>
+          <label class="lk"><span>Brightness <em id="brightVal"></em></span><input id="bright" type="range" min="0.3" max="2" step="0.05" value="1"></label>
+          <label class="lk"><span>Light direction <em id="angleVal"></em></span><input id="angle" type="range" min="-180" max="180" step="5" value="0"></label>
+          <label class="lk check"><input id="shadows" type="checkbox"> Shadows on the ground</label>
+          <label class="lk"><span>Material</span><select id="material"></select></label>
+          <div class="lk"><span>Colour of the whole model</span><div class="swatches" id="swatches"></div></div>
+        </div>
+      </div>
+
+      <button class="btn robot float movebtn" id="moveBtn" type="button" hidden>Move joints</button>
+      <div class="float joints" id="jointsPanel" hidden>
+        <div class="fhead">Move joints <button class="x" id="jointsMin" title="Minimize">–</button></div>
+        <div class="fbody">
+          <div class="ctl">
+            <button class="btn robot small" id="playBtn" type="button">▶ Play motion</button>
+            <input id="speed" type="range" min="0.2" max="3" step="0.1" value="1" title="Speed">
+            <button class="btn ghost small" id="jointReset" type="button">Reset</button>
+          </div>
+          <div id="jointList"></div>
+        </div>
+      </div>
+
+      <div id="picked" class="picked" hidden></div>
+      <div id="readout" class="readout" hidden></div>
+      <div class="hint" id="hint">Left drag: rotate · Right drag: pan · Wheel: zoom to cursor · Click a part to pick it</div>
+      <div id="building" class="float building" hidden><div class="spin"></div><span id="buildingText">Building</span><button id="stopBuild" class="btn ghost small" type="button" hidden>Stop</button></div>
+    </main>
+
+    <aside id="right" class="panel">
+      <div class="phead"><h2>AI designer</h2><button class="btn ghost small" id="newModel" type="button">New model</button></div>
+      <div id="chat" class="chat">
+        <div class="intro" id="intro">
+          <h3>What do you want to make?</h3>
+          <p>Describe the part in plain words, with sizes if you know them. Then keep chatting to change it.</p>
+          <div class="examples" id="examples"></div>
+        </div>
+      </div>
+      <form id="composer" class="composer">
+        <div class="modes" id="modes"></div>
+        <div id="editing" class="editing" hidden><span>Changing <b id="editingTitle"></b></span><button class="x" id="stopEditing" type="button" title="Start a new model instead">×</button></div>
+        <div class="box">
+          <textarea id="prompt" rows="3" placeholder="Wall bracket for a 25 mm pipe, two M5 screw holes, 4 mm thick"></textarea>
+          <div class="bar">
+            <label title="Measures the result against your prompt and repairs it. Slower."><input type="checkbox" id="details"> Check sizes</label>
+            <button id="go" class="btn send" type="submit" title="Generate (Enter)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            <button id="stop" class="btn send stop" type="button" title="Stop generating (Esc)" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>
+          </div>
+        </div>
+      </form>
+    </aside>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="ai" class="on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg>AI</button>
+    <button data-tab="model"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 12l8-4.5 M12 12v9 M12 12L4 7.5"/></svg>Model</button>
+    <button data-tab="sliders"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Sliders</button>
+  </nav>
+</div>
+
+<div id="dlMenu" class="dlmenu" hidden>
+  <div id="dlScopeBox">
+    <h4>Parts</h4>
+    <div class="seg" id="dlScope"></div>
+    <div class="seg" id="dlLayout"></div>
+  </div>
+  <h4>Format</h4>
+  <div class="files" id="dlFormats"></div>
+  <div id="dlExtraBox">
+    <h4>More files</h4>
+    <div class="files" id="dlExtra"></div>
+  </div>
+  <div id="dlStatus" class="status"></div>
+</div>
+
+<div id="keyOverlay" class="overlay" hidden>
+  <form id="keyBox" class="dialog">
+    <h2>Add your AI API key</h2>
+    <p>TextoCAD runs on your own key from any supported provider. The key is checked with the provider and saved only on this computer.</p>
+    <label class="f" for="keyProvider">Provider</label>
+    <select id="keyProvider"><option value="">Detect from the key</option></select>
+    <label class="f" for="keyInput">API key</label>
+    <input id="keyInput" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key" required>
+    <div id="keyHelp" class="status"></div>
+    <details>
+      <summary>Choose a model (optional)</summary>
+      <input id="keyModel" type="text" placeholder="Leave empty for the provider's best model" style="margin-top:8px">
+    </details>
+    <div class="acts">
+      <button id="keySave" class="btn" type="submit">Save key</button>
+      <button id="keyClose" class="btn ghost" type="button" hidden>Close</button>
+    </div>
+    <button id="keyRemove" class="btn ghost small" type="button" style="margin-top:8px" hidden>Remove saved key</button>
+    <div id="keyStatus" class="status"></div>
+  </form>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { toCreasedNormals } from "three/addons/utils/BufferGeometryUtils.js";
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+
+const MODES = [["", "Auto"], ["printing", "3D print"], ["precision", "Precision"], ["organic", "Organic"], ["robotics", "Robotics"]];
+const MODE_LABEL = { printing: "3D print", precision: "Precision", organic: "Organic", robotics: "Robotics" };
+const EXAMPLES = [
+  ["Wall bracket for a 25 mm pipe, two M5 screw holes, 4 mm thick", "printing"],
+  ["Coffee cup, 90 mm tall, 80 mm across, with a comfortable handle", "printing"],
+  ["M8 hex bolt, 40 mm long, with a hex nut", "precision"],
+  ["Smooth vase with a gentle twist, 180 mm tall", "organic"],
+  ["Four-axis robotic arm with a two-finger gripper", "robotics"],
+];
+const FILES = {
+  step: ["STEP", "Any CAD program"], stl: ["STL", "Slicers, 3D printing"], "3mf": ["3MF", "Printing, keeps colours"],
+  glb: ["GLB", "Web, Blender, AR"], urdf: ["URDF", "Robot description"], xacro: ["XACRO", "ROS robot macro"],
+  zip: ["ZIP", "ROS 2 package"], source: ["Script", "The generated code"],
+};
+const LIGHTS = [
+  { id: "studio", label: "Studio", hemi: [0xdfe6f2, 0x2a2620, 0.45], exposure: 0.95, env: 1,
+    lights: [[0xfff4e6, 2.6, -260, 380, 300, true], [0xcdd8ff, 0.55, 360, 150, 200], [0xffffff, 0.85, 60, 260, -380]] },
+  { id: "soft", label: "Soft", hemi: [0xf2f4f8, 0x6b6660, 1.1], exposure: 1, env: 1.2,
+    lights: [[0xffffff, 1.1, -200, 400, 250, true], [0xffffff, 0.5, 300, 200, -200]] },
+  { id: "outdoor", label: "Outdoor sun", hemi: [0xb8d4ff, 0x7a6a50, 0.7], exposure: 0.95, env: 0.9,
+    lights: [[0xfff1d6, 3.2, -180, 520, 160, true], [0x9fc3ff, 0.35, 260, 120, -260]] },
+  { id: "dramatic", label: "Dramatic", hemi: [0x8090a8, 0x0a0a0c, 0.15], exposure: 0.85, env: 0.35,
+    lights: [[0xffe2c0, 3.4, -420, 140, 160, true], [0x7fb2ff, 2.0, 240, 220, -360]] },
+  { id: "flat", label: "Flat / technical", hemi: [0xffffff, 0xcfcfcf, 1.6], exposure: 1, env: 0.6,
+    lights: [[0xffffff, 0.6, 0, 400, 0, true], [0xffffff, 0.45, 400, 100, 0], [0xffffff, 0.45, -400, 100, 0], [0xffffff, 0.45, 0, 100, 400], [0xffffff, 0.45, 0, 100, -400]] },
+];
+const MATERIALS = [
+  { id: "cad", label: "CAD default", roughness: 0.5, metalness: 0.15, env: 0.45 },
+  { id: "matte", label: "Matte PLA", roughness: 0.82, metalness: 0, env: 0.3 },
+  { id: "silk", label: "Silk PLA", roughness: 0.28, metalness: 0.35, env: 0.9, sheen: 0.6 },
+  { id: "resin", label: "Resin", roughness: 0.18, metalness: 0, env: 0.7, clearcoat: 0.8 },
+  { id: "aluminium", label: "Aluminium", roughness: 0.32, metalness: 1, env: 1, tint: "#c9ced4" },
+  { id: "steel", label: "Steel", roughness: 0.25, metalness: 1, env: 1, tint: "#9aa0a6" },
+  { id: "brass", label: "Brass", roughness: 0.3, metalness: 1, env: 1, tint: "#c9a24a" },
+  { id: "rubber", label: "Rubber", roughness: 0.95, metalness: 0, env: 0.15, tint: "#2b2d31" },
+];
+const SWATCHES = ["#9aa1aa", "#eeeeee", "#2b2d31", "#c9504b", "#e07b39", "#e3c341", "#3f9e6e", "#3aa3b5", "#4a7bd0", "#2d3e70", "#8a63c7", "#e58fb0"];
+
+const store = {
+  get(key, fallback) { try { return JSON.parse(localStorage.getItem("textocad." + key)) ?? fallback; } catch { return fallback; } },
+  set(key, value) { try { localStorage.setItem("textocad." + key, JSON.stringify(value)); } catch {} },
+};
+
+const look = Object.assign({ lighting: "studio", bright: 1, angle: 0, shadows: false, material: "cad", color: null }, store.get("look", {}));
+const view = Object.assign({ edges: false, grid: true, ortho: false, xray: false }, store.get("view", {}));
+
+// ---------- viewer ----------
+const host = $("viewer");
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+host.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const persp = new THREE.PerspectiveCamera(38, 1, 0.1, 100000);
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, -100000, 100000);
+for (const cam of [persp, ortho]) cam.up.set(0, 0, 1);
+persp.position.set(160, -220, 150);
+let camera = persp;
+
+const controls = new OrbitControls(persp, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.12;
+controls.zoomToCursor = true;
+controls.screenSpacePanning = true;
+controls.rotateSpeed = 0.9;
+
+const rig = new THREE.Group();
+scene.add(rig);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ opacity: 0.28 }));
+ground.receiveShadow = true;
+scene.add(ground);
+let grid = null;
+
+let model = null;
+let radius = 100;
+let center = new THREE.Vector3();
+let parts = [];
+let picked = null;
+let joints = [];
+let playing = false;
+let motionTime = 0;
+let tween = null;
+let keepView = false;
+
+function resize() {
+  const w = host.clientWidth, h = Math.max(host.clientHeight, 1);
+  renderer.setSize(w, h);
+  persp.aspect = w / h;
+  persp.updateProjectionMatrix();
+  const half = ortho.userData.half || radius * 1.3;
+  ortho.left = -half * w / h; ortho.right = half * w / h; ortho.top = half; ortho.bottom = -half;
+  ortho.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host);
+
+
+function applyLights() {
+  rig.clear();
+  const preset = LIGHTS.find((l) => l.id === look.lighting) || LIGHTS[0];
+  const k = look.bright;
+  rig.add(new THREE.HemisphereLight(preset.hemi[0], preset.hemi[1], preset.hemi[2] * k));
+  const scale = Math.max(radius, 1) / 120;
+  for (const [color, intensity, x, up, z, key] of preset.lights) {
+    const light = new THREE.DirectionalLight(color, intensity * k);
+    light.position.set(x, -z, up).multiplyScalar(scale).add(center);
+    light.target.position.copy(center);
+    rig.add(light, light.target);
+    if (key && look.shadows) {
+      light.castShadow = true;
+      light.shadow.mapSize.set(2048, 2048);
+      const s = light.shadow.camera;
+      s.left = s.bottom = -radius * 1.6; s.right = s.top = radius * 1.6;
+      s.near = 1; s.far = radius * 12;
+      light.shadow.bias = -0.0005;
+      light.shadow.normalBias = radius * 0.002;
+    }
+  }
+  rig.rotation.z = THREE.MathUtils.degToRad(look.angle);
+  renderer.toneMappingExposure = preset.exposure * 0.8;
+  ground.visible = look.shadows && !!model;
+}
+
+function applyMaterials() {
+  const mat = MATERIALS.find((m) => m.id === look.material) || MATERIALS[0];
+  const env = (LIGHTS.find((l) => l.id === look.lighting) || LIGHTS[0]).env;
+  for (const part of parts) {
+    const base = part.color || look.color || (mat.tint ?? part.original);
+    part.object.traverse((o) => {
+      if (!o.isMesh) return;
+      const old = o.material;
+      o.material = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color(base), roughness: mat.roughness, metalness: mat.metalness, envMapIntensity: mat.env * env,
+        clearcoat: mat.clearcoat || 0, clearcoatRoughness: 0.15, sheen: mat.sheen || 0,
+        transparent: view.xray, opacity: view.xray ? 0.35 : 1, depthWrite: !view.xray, side: THREE.DoubleSide,
+      });
+      if (part === picked) {
+        o.material.emissive.set(0x2563eb);
+        o.material.emissiveIntensity = 0.45;
+      } else if (part.hover) {
+        o.material.emissive.set(0x60a5fa);
+        o.material.emissiveIntensity = 0.25;
+      }
+      if (old && old.dispose) old.dispose();
+      o.castShadow = true;
+    });
+  }
+}
+
+function applyEdges() {
+  if (!model) return;
+  model.traverse((o) => {
+    if (!o.isMesh || o.userData.isEdge) return;
+    if (view.edges && !o.userData.edges) {
+      const lines = new THREE.LineSegments(
+        new THREE.EdgesGeometry(o.geometry, 28),
+        new THREE.LineBasicMaterial({ color: 0x0b0b0f, transparent: true, opacity: 0.55 }),
+      );
+      lines.userData.isEdge = true;
+      lines.raycast = () => {};
+      o.add(lines);
+      o.userData.edges = lines;
+    }
+    if (o.userData.edges) o.userData.edges.visible = view.edges;
+  });
+}
+
+function applyGrid() {
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); grid = null; }
+  if (!model || !view.grid) return;
+  const box = new THREE.Box3().setFromObject(model);
+  const span = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, 1) * 2.4;
+  const cell = Math.pow(10, Math.floor(Math.log10(span / 8)));
+  const size = Math.ceil(span / cell / 2) * 2 * cell;
+  const light = document.documentElement.dataset.theme === "light";
+  grid = new THREE.GridHelper(size, Math.round(size / cell), light ? 0x9aa8c0 : 0x3b4a66, light ? 0xcfd6e2 : 0x1f2633);
+  grid.rotation.x = Math.PI / 2;
+  grid.position.set(center.x, center.y, box.min.z - radius * 0.001);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.7;
+  scene.add(grid);
+}
+
+function placeGround() {
+  if (!model) return;
+  const box = new THREE.Box3().setFromObject(model);
+  ground.scale.set(radius * 12, radius * 12, 1);
+  ground.position.set(center.x, center.y, box.min.z - radius * 0.002);
+}
+
+function setCamera(cam) {
+  const target = controls.target.clone();
+  const dist = camera.position.distanceTo(target) / (camera.isOrthographicCamera ? camera.zoom : 1);
+  const dir = camera.position.clone().sub(target).normalize();
+  if (cam.isOrthographicCamera) {
+    cam.userData.half = dist * Math.tan(THREE.MathUtils.degToRad(persp.fov / 2));
+    cam.zoom = 1;
+  }
+  cam.position.copy(target).addScaledVector(dir, dist);
+  camera = cam;
+  controls.object = cam;
+  controls.target.copy(target);
+  resize();
+  controls.update();
+}
+
+function frame(dir, animate = true) {
+  if (!model) return;
+  const box = new THREE.Box3();
+  for (const p of parts) if (p.object.visible) box.expandByObject(p.object);
+  if (box.isEmpty()) box.setFromObject(model);
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const r = Math.max(sphere.radius, 0.5);
+  const d = dir ? dir.clone().normalize() : camera.position.clone().sub(controls.target).normalize();
+  const dist = r / Math.sin(THREE.MathUtils.degToRad(persp.fov / 2)) * 1.12;
+  const to = { pos: sphere.center.clone().addScaledVector(d, dist), target: sphere.center.clone(), half: r * 1.15 };
+  if (!animate) {
+    camera.position.copy(to.pos); controls.target.copy(to.target);
+    ortho.userData.half = to.half; ortho.zoom = 1; resize();
+    return;
+  }
+  tween = { t: 0, from: { pos: camera.position.clone(), target: controls.target.clone(), half: ortho.userData.half || to.half, zoom: ortho.zoom }, to };
+}
+
+function stepTween(dt) {
+  tween.t = Math.min(1, tween.t + dt / 0.45);
+  const e = 1 - Math.pow(1 - tween.t, 3);
+  camera.position.lerpVectors(tween.from.pos, tween.to.pos, e);
+  controls.target.lerpVectors(tween.from.target, tween.to.target, e);
+  if (camera.isOrthographicCamera) {
+    ortho.userData.half = THREE.MathUtils.lerp(tween.from.half, tween.to.half, e);
+    ortho.zoom = THREE.MathUtils.lerp(tween.from.zoom, 1, e);
+    resize();
+  }
+  if (tween.t >= 1) tween = null;
+}
+
+const VIEWS = {
+  iso: [1, -1.15, 0.85], top: [0, -0.0001, 1], front: [0, -1, 0], back: [0, 1, 0], right: [1, 0, 0], left: [-1, 0, 0],
+};
+function setView(name) { frame(new THREE.Vector3(...VIEWS[name])); }
+
+function zoomBy(f) {
+  if (camera.isOrthographicCamera) { camera.zoom = Math.max(0.05, camera.zoom / f); camera.updateProjectionMatrix(); return; }
+  const off = camera.position.clone().sub(controls.target).multiplyScalar(f);
+  camera.position.copy(controls.target).add(off);
+}
+
+const AXES = [["X", new THREE.Vector3(1, 0, 0), "#f87171", "right"], ["Y", new THREE.Vector3(0, 1, 0), "#4ade80", "back"], ["Z", new THREE.Vector3(0, 0, 1), "#60a5fa", "top"]];
+const axesSvg = $("axes");
+const NS = "http://www.w3.org/2000/svg";
+const axisEls = AXES.map(([label, , color, viewName]) => {
+  const line = document.createElementNS(NS, "line");
+  line.setAttribute("stroke", color); line.setAttribute("stroke-width", "2");
+  const neg = document.createElementNS(NS, "circle");
+  neg.setAttribute("r", "4"); neg.setAttribute("fill", "none"); neg.setAttribute("stroke", color); neg.setAttribute("opacity", ".6");
+  const dot = document.createElementNS(NS, "circle");
+  dot.setAttribute("r", "8"); dot.setAttribute("fill", color); dot.classList.add("hit");
+  dot.addEventListener("click", () => setView(viewName));
+  const title = document.createElementNS(NS, "title");
+  title.textContent = `View from ${label}`;
+  dot.append(title);
+  const text = document.createElementNS(NS, "text");
+  text.textContent = label; text.setAttribute("text-anchor", "middle"); text.setAttribute("dy", "3.5");
+  return { line, neg, dot, text };
+});
+const inv = new THREE.Quaternion();
+function drawAxes() {
+  inv.copy(camera.quaternion).invert();
+  const items = AXES.map(([, v], i) => ({ i, p: v.clone().applyQuaternion(inv) }));
+  items.sort((a, b) => a.p.z - b.p.z);
+  axesSvg.replaceChildren();
+  for (const { i, p } of items) {
+    const e = axisEls[i], x = p.x * 30, y = -p.y * 30;
+    e.line.setAttribute("x1", 0); e.line.setAttribute("y1", 0); e.line.setAttribute("x2", x); e.line.setAttribute("y2", y);
+    e.neg.setAttribute("cx", -x); e.neg.setAttribute("cy", -y);
+    e.dot.setAttribute("cx", x); e.dot.setAttribute("cy", y);
+    e.text.setAttribute("x", x); e.text.setAttribute("y", y);
+    axesSvg.append(e.neg, e.line, e.dot, e.text);
+  }
+}
+
+function findNode(root, name) {
+  let hit = null;
+  root.traverse((o) => { if (!hit && o.userData.name === name) hit = o; });
+  return hit;
+}
+
+function collectParts(data) {
+  const list = [];
+  const seen = new Set();
+  for (const p of data.parts || []) {
+    const object = findNode(model, p.name + "__mesh") || findNode(model, p.name);
+    if (!object || seen.has(object)) continue;
+    seen.add(object);
+    list.push({ name: p.name, label: p.label || p.name.replace(/_/g, " "), bbox: p.bbox, object });
+  }
+  if (!list.length) {
+    model.traverse((o) => {
+      if (!o.isMesh) return;
+      const name = o.userData.name || o.name || `part ${list.length + 1}`;
+      list.push({ name, label: name.replace(/__mesh$/, "").replace(/_/g, " "), object: o });
+    });
+  }
+  for (const part of list) {
+    let color = null;
+    part.object.traverse((o) => { if (!color && o.isMesh && o.material && o.material.color) color = "#" + o.material.color.getHexString(THREE.SRGBColorSpace); });
+    part.original = color || "#9aa1aa";
+    part.color = null;
+  }
+  return list;
+}
+
+function collectJoints(data) {
+  const out = [];
+  for (const j of data.robot?.joints || []) {
+    if (!["revolute", "continuous", "prismatic"].includes(j.type)) continue;
+    const frame = findNode(model, `joint__${j.name}`);
+    const child = frame && (frame.children.find((c) => c.userData.name === j.child) || findNode(frame, j.child));
+    if (!child) continue;
+    const prismatic = j.type === "prismatic";
+    let lo = j.limit?.lower, hi = j.limit?.upper;
+    if (lo == null || hi == null || lo === hi) [lo, hi] = prismatic ? [0, 50] : [-Math.PI, Math.PI];
+    const axis = new THREE.Vector3(...(j.axis || [0, 0, 1])).normalize();
+    out.push({ ...j, node: child, axis, lo, hi, prismatic, q: Math.min(Math.max(0, lo), hi), base: child.position.clone(), baseQ: child.quaternion.clone() });
+  }
+  return out;
+}
+
+function setJoint(j, q) {
+  j.q = Math.min(Math.max(q, j.lo), j.hi);
+  if (j.prismatic) {
+    j.node.position.copy(j.base).addScaledVector(j.axis, j.q);
+  } else {
+    j.node.quaternion.copy(j.baseQ).multiply(new THREE.Quaternion().setFromAxisAngle(j.axis, j.q));
+  }
+  if (j.input) { j.input.value = j.q; j.out.textContent = jointText(j); }
+}
+
+function jointText(j) {
+  return j.prismatic ? `${Math.round(j.q)} mm` : `${Math.round(THREE.MathUtils.radToDeg(j.q))}°`;
+}
+
+function animateJoints() {
+  joints.forEach((j, i) => {
+    if (j.type === "continuous") {
+      setJoint(j, ((motionTime * 1.2 + Math.PI) % (2 * Math.PI)) - Math.PI);
+      return;
+    }
+    const mid = (j.lo + j.hi) / 2, amp = (j.hi - j.lo) / 2 * 0.85;
+    setJoint(j, mid + amp * Math.sin(motionTime * 1.1 + i * 1.3));
+  });
+}
+
+function renderJoints() {
+  const list = $("jointList");
+  list.replaceChildren();
+  for (const j of joints) {
+    const box = el("div", "joint");
+    const head = el("div", "jt");
+    const name = el("span", "", j.name.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()));
+    name.append(" ", el("small", "", j.prismatic ? "slides" : j.type === "continuous" ? "spins" : "turns"));
+    j.out = el("span", "val", jointText(j));
+    head.append(name, j.out);
+    j.input = el("input");
+    j.input.type = "range"; j.input.min = j.lo; j.input.max = j.hi; j.input.step = j.prismatic ? 0.5 : 0.01; j.input.value = j.q;
+    j.input.addEventListener("input", () => { stopMotion(); setJoint(j, Number(j.input.value)); });
+    box.append(head, j.input);
+    list.append(box);
+  }
+  const robot = joints.length > 0;
+  $("jointsPanel").hidden = !robot || store.get("jointsMin", false);
+  $("moveBtn").hidden = !robot || !$("jointsPanel").hidden;
+}
+
+function stopMotion() {
+  playing = false;
+  $("playBtn").textContent = "▶ Play motion";
+}
+
+function renderParts() {
+  const list = $("partList");
+  list.replaceChildren();
+  $("partCount").textContent = parts.length;
+  for (const part of parts) {
+    const row = el("div", "part" + (part === picked ? " sel" : ""));
+    const vis = el("input");
+    vis.type = "checkbox"; vis.checked = part.object.visible; vis.title = "Show or hide";
+    vis.addEventListener("change", () => { part.object.visible = vis.checked; });
+    const sw = el("span", "sw");
+    sw.style.background = part.color || look.color || part.original;
+    const pick = el("input");
+    pick.type = "color"; pick.value = part.color || part.original; pick.title = "Colour";
+    pick.addEventListener("input", () => { part.color = pick.value; sw.style.background = pick.value; applyMaterials(); });
+    sw.append(pick);
+    const nm = el("button", "nm", part.label);
+    nm.type = "button";
+    nm.addEventListener("click", () => pickPart(part === picked ? null : part, true));
+    row.addEventListener("mouseenter", () => { part.hover = true; applyMaterials(); });
+    row.addEventListener("mouseleave", () => { part.hover = false; applyMaterials(); });
+    row.append(vis, sw, nm);
+    if (part.bbox) row.append(el("span", "dim", part.bbox.map((v) => fmt(v)).join("×")));
+    list.append(row);
+  }
+}
+
+function pickPart(part, focus = false) {
+  picked = part;
+  if (!$("dlMenu").hidden) renderDownload();
+  applyMaterials();
+  renderParts();
+  $("picked").hidden = !part;
+  if (part) $("picked").textContent = part.label + (part.bbox ? ` · ${part.bbox.map((v) => fmt(v)).join(" × ")} mm` : "");
+  if (part && focus) {
+    const box = new THREE.Box3().setFromObject(part.object);
+    const s = box.getBoundingSphere(new THREE.Sphere());
+    const d = camera.position.clone().sub(controls.target).normalize();
+    const dist = Math.max(s.radius, 0.5) / Math.sin(THREE.MathUtils.degToRad(persp.fov / 2)) * 1.4;
+    tween = { t: 0, from: { pos: camera.position.clone(), target: controls.target.clone(), half: ortho.userData.half || radius, zoom: ortho.zoom },
+      to: { pos: s.center.clone().addScaledVector(d, dist), target: s.center.clone(), half: s.radius * 1.4 } };
+  }
+}
+
+const ray = new THREE.Raycaster();
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; tween = null; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!down || !model || e.button !== 0) return;
+  if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  const hit = ray.intersectObjects(parts.filter((p) => p.object.visible).map((p) => p.object), true)[0];
+  let part = null;
+  if (hit) {
+    for (let o = hit.object; o && !part; o = o.parent) part = parts.find((p) => p.object === o) || null;
+  }
+  pickPart(part === picked ? null : part);
+});
+renderer.domElement.addEventListener("dblclick", () => { if (picked) pickPart(picked, true); else frame(); });
+
+function fmt(v) {
+  const n = Number(v);
+  return Math.abs(n) >= 100 ? n.toFixed(0) : Math.abs(n) >= 10 ? n.toFixed(1) : n.toFixed(2);
+}
+
+function loadModel(data) {
+  return new Promise((resolve, reject) => {
+    new GLTFLoader().load(data.files.glb, (gltf) => {
+      if (model) {
+        scene.remove(model);
+        model.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.dispose) o.material.dispose(); });
+      }
+      stopMotion();
+      model = gltf.scene;
+      model.traverse((o) => {
+        if (o.isMesh && !o.geometry.attributes.normal) o.geometry = toCreasedNormals(o.geometry, THREE.MathUtils.degToRad(32));
+      });
+      scene.add(model);
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(model);
+      const sphere = box.getBoundingSphere(new THREE.Sphere());
+      radius = Math.max(sphere.radius, 0.5);
+      center = sphere.center;
+      persp.near = radius / 200; persp.far = radius * 400; persp.updateProjectionMatrix();
+      controls.minDistance = radius * 0.02;
+      controls.maxDistance = radius * 60;
+      parts = collectParts(data);
+      picked = null;
+      $("picked").hidden = true;
+      joints = collectJoints(data);
+      applyLights(); applyMaterials(); applyEdges(); applyGrid(); placeGround();
+      frame(keepView ? null : new THREE.Vector3(...VIEWS.iso), false);
+      renderParts(); renderJoints(); renderDownload();
+      $("dock").hidden = false;
+      $("empty").hidden = true;
+      resolve();
+    }, undefined, () => reject(new Error("The model files for this build are no longer on disk.")));
+  });
+}
+
+// ---------- page state ----------
+let current = null;
+let editing = true;
+let mode = "";
+let keyState = null;
+let pendingPrompt = false;
+let busyTimer = null;
+let running = null;
+const builds = new Map(Object.entries(store.get("builds", {})));
+let thread = store.get("thread", []);
+
+function saveState() {
+  const keep = [...builds.entries()].slice(-30);
+  store.set("builds", Object.fromEntries(keep));
+  store.set("thread", thread.slice(-60));
+  store.set("current", current ? current.id : null);
+}
+
+function remember(data) {
+  const { script, ...light } = data;
+  builds.set(data.id, light);
+}
+
+async function showBuild(data, { quiet = false } = {}) {
+  current = data;
+  editing = true;
+  renderModelPanel();
+  renderComposer();
+  renderChat();
+  saveState();
+  if (data.files && data.files.glb) {
+    try { await loadModel(data); }
+    catch (err) { if (!quiet) addAi({ error: err.message }); }
+  }
+  setTab("model", true);
+}
+
+function renderModelPanel() {
+  const data = current;
+  $("noModel").hidden = !!data;
+  $("modelBox").hidden = !data;
+  $("topTitle").textContent = data ? data.title || "" : "";
+  document.title = data && data.title ? `${data.title} · TextoCAD` : "TextoCAD";
+  renderDownload();
+  if (!data) { $("paramsBox").hidden = $("filesBox").hidden = $("paramsNote").hidden = true; $("readout").hidden = true; return; }
+  $("mTitle").replaceChildren(el("span", "", (data.title || "Model") + " "), el("span", "badge " + (data.mode || ""), MODE_LABEL[data.mode] || data.mode || ""));
+  const facts = $("mFacts");
+  facts.replaceChildren();
+  const rows = [
+    ["Size", data.bbox ? data.bbox.map(fmt).join(" × ") + " mm" : null],
+    ["Volume", data.volume ? (data.volume / 1000).toFixed(data.volume > 100000 ? 0 : 2) + " cm³" : null],
+    ["Parts", data.parts && data.parts.length > 1 ? String(data.parts.length) : null],
+    ["Joints", data.robot && data.robot.joints ? String(data.robot.joints.filter((j) => j.type !== "fixed").length) : null],
+    ["AI model", data.model],
+    ["Time", data.seconds ? data.seconds + " s" : null],
+  ];
+  for (const [k, v] of rows) if (v) facts.append(el("dt", "", k), el("dd", "", v));
+  $("readout").hidden = !data.bbox;
+  if (data.bbox) $("readout").textContent = data.bbox.map(fmt).join(" × ") + " mm";
+  renderParams(data.params);
+  renderFiles(data.files);
+}
+
+function renderParams(params) {
+  const box = $("params");
+  box.replaceChildren();
+  const editable = current && (current.mode === "printing" || current.mode === "precision");
+  for (const p of params || []) {
+    const value = p.value ?? p.defaultValue;
+    const row = el("div", "param");
+    const top = el("div", "top-row");
+    const label = el("label", "", p.label || p.key);
+    label.title = p.description || p.label || p.key;
+    top.append(label);
+    let input;
+    if (typeof value === "boolean") {
+      input = el("input");
+      input.type = "checkbox"; input.checked = value;
+      input.style.accentColor = "var(--brand2)";
+      top.append(input);
+      row.append(top);
+    } else if (typeof value === "number") {
+      const num = el("div", "num");
+      input = el("input");
+      input.type = "number"; input.value = value; input.step = p.step ?? "any";
+      num.append(input);
+      if (p.unit) num.append(el("span", "", p.unit));
+      top.append(num);
+      row.append(top);
+      const lo = p.min ?? (value > 0 ? 0 : value * 2), hi = p.max ?? (value > 0 ? value * 3 : 10);
+      const slider = el("input");
+      slider.type = "range"; slider.min = lo; slider.max = hi; slider.step = p.step ?? (hi - lo > 20 ? 0.5 : 0.05); slider.value = value;
+      slider.addEventListener("input", () => { input.value = slider.value; mark(); });
+      input.addEventListener("input", () => { slider.value = input.value; mark(); });
+      row.append(slider);
+    } else {
+      input = el("input");
+      input.type = "text"; input.value = value ?? "";
+      top.append(input);
+      row.append(top);
+    }
+    input.dataset.key = p.key;
+    input.dataset.initial = typeof value === "boolean" ? String(value) : String(value ?? "");
+    function mark() {
+      const now = input.type === "checkbox" ? String(input.checked) : input.value;
+      row.classList.toggle("changed", now !== input.dataset.initial);
+    }
+    input.addEventListener("change", mark);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") $("rebuild").click(); });
+    box.append(row);
+  }
+  const has = !!(params && params.length);
+  $("paramsBox").hidden = !(editable && has);
+  $("paramsNote").hidden = editable || !current;
+  $("paramsNote").textContent = current && current.mode === "robotics"
+    ? "Move the joints in the viewer. To change the robot's shape, describe it in the chat."
+    : "To change this model, describe what you want in the chat.";
+  if (editable && !has) { $("paramsNote").hidden = false; $("paramsNote").textContent = "This model has no sliders. Describe changes in the chat."; }
+  $("paramStatus").textContent = "";
+}
+
+const FORMATS = [
+  ["step", "STEP", "Any CAD program"], ["stl", "STL", "Slicers, 3D printing"], ["3mf", "3MF", "Printing, keeps colours"],
+  ["glb", "GLB", "Web, Blender, AR"], ["obj", "OBJ", "3D apps"],
+];
+const dl = { scope: "all", layout: "merged" };
+
+function dlChosen() {
+  if (dl.scope === "picked") return picked ? [picked] : [];
+  if (dl.scope === "shown") return parts.filter((p) => p.object.visible);
+  return parts;
+}
+
+function renderDownload() {
+  const data = current;
+  $("dlBtn").disabled = !data || !data.files;
+  if (!data) { $("dlMenu").hidden = true; return; }
+  const known = new Map((data.parts || []).map((p) => [p.name, p]));
+  const exportable = parts.filter((p) => known.has(p.name));
+  const multi = exportable.length > 1;
+  $("dlScopeBox").hidden = !multi;
+  if (!multi) { dl.scope = "all"; dl.layout = "merged"; }
+  if (dl.scope === "picked" && !picked) dl.scope = "all";
+  const chosen = dlChosen();
+  const scope = $("dlScope");
+  scope.replaceChildren();
+  const counts = [["all", "All", parts.length], ["shown", "Shown", parts.filter((p) => p.object.visible).length], ["picked", "Picked", picked ? 1 : 0]];
+  for (const [id, label, n] of counts) {
+    const b = el("button", dl.scope === id ? "on" : "", `${label} (${n})`);
+    b.type = "button"; b.disabled = n === 0;
+    b.addEventListener("click", () => { dl.scope = id; renderDownload(); });
+    scope.append(b);
+  }
+  const layout = $("dlLayout");
+  layout.replaceChildren();
+  layout.hidden = chosen.length < 2;
+  for (const [id, label] of [["merged", "One file"], ["separate", "File per part (zip)"]]) {
+    const b = el("button", dl.layout === id ? "on" : "", label);
+    b.type = "button";
+    b.addEventListener("click", () => { dl.layout = id; renderDownload(); });
+    layout.append(b);
+  }
+  const whole = dl.scope === "all" && (dl.layout === "merged" || !multi);
+  const formats = $("dlFormats");
+  formats.replaceChildren();
+  for (const [fmt, name, what] of FORMATS) {
+    const direct = whole && data.files[fmt];
+    const viaParts = exportable.length > 0 && chosen.length > 0 && chosen.every((p) => known.has(p.name))
+      && (fmt !== "step" || chosen.every((p) => known.get(p.name).hasStep));
+    if (!direct && !viaParts && fmt === "obj") continue;
+    const b = el("button", "file");
+    b.type = "button"; b.disabled = !(direct || viaParts);
+    b.title = b.disabled ? (fmt === "step" ? "STEP comes with Precision mode" : "Not available for this model") : `Download ${name}`;
+    b.append(el("b", "", name), el("span", "", what));
+    b.addEventListener("click", () => downloadAs(fmt, direct ? data.files[fmt] : null, chosen));
+    formats.append(b);
+  }
+  const extra = $("dlExtra");
+  extra.replaceChildren();
+  for (const kind of ["urdf", "zip", "xacro", "source"]) {
+    const url = data.files[kind];
+    if (!url) continue;
+    const [name, what] = FILES[kind];
+    const a = el("a", "file");
+    a.href = url; a.download = "";
+    a.append(el("b", "", name), el("span", "", what));
+    extra.append(a);
+  }
+  $("dlExtraBox").hidden = !extra.children.length;
+}
+
+function saveFile(url, name) {
+  const a = el("a");
+  a.href = url; a.download = name || "";
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+async function downloadAs(fmt, url, chosen) {
+  const status = $("dlStatus");
+  status.className = "status";
+  if (url) { saveFile(url); status.textContent = ""; return; }
+  status.textContent = "Preparing the file…";
+  try {
+    const colors = {};
+    for (const p of chosen) if (p.color || look.color) colors[p.name] = p.color || look.color;
+    const res = await fetch(`/builds/${current.id}/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parts: chosen.map((p) => p.name), format: fmt, layout: chosen.length > 1 ? dl.layout : "merged", colors }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || res.statusText);
+    }
+    const match = (res.headers.get("content-disposition") || "").match(/filename="?([^";]+)"?/);
+    const blobUrl = URL.createObjectURL(await res.blob());
+    saveFile(blobUrl, match ? match[1] : `textocad.${fmt}`);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    status.textContent = "";
+  } catch (err) {
+    status.className = "status error";
+    status.textContent = err.message;
+  }
+}
+
+$("dlBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("dlMenu").hidden = !$("dlMenu").hidden;
+  if (!$("dlMenu").hidden) { $("dlStatus").textContent = ""; renderDownload(); }
+});
+document.addEventListener("click", (e) => {
+  if (!$("dlMenu").hidden && e.target.isConnected && !e.target.closest("#dlMenu, #dlBtn")) $("dlMenu").hidden = true;
+});
+
+function renderFiles(files) {
+  const box = $("files");
+  box.replaceChildren();
+  for (const [kind, url] of Object.entries(files || {})) {
+    const [name, what] = FILES[kind] || [kind.toUpperCase(), ""];
+    const a = el("a", "file");
+    a.href = url; a.download = "";
+    a.append(el("b", "", name), el("span", "", what));
+    box.append(a);
+  }
+  $("filesBox").hidden = !box.children.length;
+}
+
+function renderChat() {
+  const chat = $("chat");
+  chat.querySelectorAll(".msg").forEach((n) => n.remove());
+  $("intro").hidden = thread.length > 0;
+  for (const m of thread) chat.append(messageEl(m));
+  if (busyTimer) chat.append(busyEl());
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function messageEl(m) {
+  if (m.role === "user") {
+    const n = el("div", "msg user", m.text);
+    if (m.mode) n.append(el("small", "", MODE_LABEL[m.mode] || m.mode));
+    return n;
+  }
+  if (m.error) {
+    const n = el("div", "msg ai err", m.error);
+    if (m.retry) {
+      const acts = el("div", "acts");
+      const again = el("button", "btn ghost small", "Try again");
+      again.type = "button";
+      again.addEventListener("click", () => { $("prompt").value = m.retry; $("composer").requestSubmit(); });
+      acts.append(again);
+      n.append(acts);
+    }
+    return n;
+  }
+  const data = builds.get(m.id);
+  const n = el("div", "msg ai");
+  n.append(el("div", "", m.text || `Built ${m.title || "your model"}.`));
+  n.append(el("div", "meta", [MODE_LABEL[m.mode] || m.mode, m.model, m.seconds ? m.seconds + " s" : ""].filter(Boolean).join(" · ")));
+  if (data) {
+    const acts = el("div", "acts");
+    const showing = current && current.id === m.id;
+    const open = el("button", "btn small " + (showing ? "ghost" : ""), showing ? "Showing" : "Open this version");
+    open.type = "button"; open.disabled = showing;
+    open.addEventListener("click", () => showBuild(data));
+    acts.append(open);
+    n.append(acts);
+  }
+  return n;
+}
+
+function busyEl() {
+  const n = el("div", "msg ai busy");
+  n.append(el("div", "spin"), el("span", "", "Designing your part"), el("span", "", ""));
+  n.lastChild.id = "elapsed";
+  return n;
+}
+
+function addAi(m) { thread.push({ role: "ai", ...m }); saveState(); renderChat(); }
+
+function renderComposer() {
+  const box = $("modes");
+  box.replaceChildren();
+  for (const [id, label] of MODES) {
+    const b = el("button", id === mode ? "on" : "", label);
+    b.type = "button";
+    b.addEventListener("click", () => { mode = id; renderComposer(); });
+    box.append(b);
+  }
+  const isEditing = !!(current && editing);
+  $("editing").hidden = !isEditing;
+  if (isEditing) $("editingTitle").textContent = current.title || "the current model";
+  $("prompt").placeholder = isEditing ? "Make it 10 mm taller, add a fillet to the top edge…" : "Wall bracket for a 25 mm pipe, two M5 screw holes, 4 mm thick";
+}
+
+function renderExamples() {
+  const box = $("examples");
+  for (const [text, m] of EXAMPLES) {
+    const b = el("button", "", text);
+    b.type = "button";
+    b.append(el("small", "", MODE_LABEL[m]));
+    b.addEventListener("click", () => { mode = m; editing = false; renderComposer(); $("prompt").value = text; $("prompt").focus(); });
+    box.append(b);
+  }
+}
+
+function setBusy(on, text = "Building", stoppable = false) {
+  $("go").disabled = on;
+  $("go").hidden = on && stoppable;
+  $("stop").hidden = !(on && stoppable);
+  $("stopBuild").hidden = !(on && stoppable);
+  $("rebuild").disabled = on;
+  $("building").hidden = !on;
+  $("buildingText").textContent = text;
+  clearInterval(busyTimer);
+  busyTimer = null;
+  if (on) {
+    const start = Date.now();
+    busyTimer = setInterval(() => {
+      const s = Math.round((Date.now() - start) / 1000);
+      const t = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      const e = $("elapsed");
+      if (e) e.textContent = t;
+      $("buildingText").textContent = `${text} · ${t}`;
+    }, 1000);
+  }
+}
+
+function setTab(tab, onlyIfCompact = false) {
+  if (onlyIfCompact && window.innerWidth > 900) return;
+  $("work").dataset.tab = tab;
+  for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === tab);
+}
+
+async function call(url, body, method = "POST", signal) {
+  const res = await fetch(url, {
+    method,
+    signal,
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join("; ") : data.detail;
+    throw new Error(detail || res.statusText);
+  }
+  return data;
+}
+
+// ---------- API key ----------
+function renderKey(state) {
+  keyState = state;
+  $("keyChip").hidden = false;
+  $("keyChip").classList.toggle("missing", !state.hasKey);
+  $("keyText").textContent = state.hasKey ? [state.provider, state.hint].filter(Boolean).join(" ") || "Key set" : "Add API key";
+  const select = $("keyProvider");
+  if (select.options.length === 1) for (const p of state.providers || []) select.add(new Option(p.label, p.id));
+  $("keyRemove").hidden = !state.saved;
+  $("keyClose").hidden = !state.hasKey;
+  keyHelp();
+}
+
+function keyHelp() {
+  const p = (keyState?.providers || []).find((x) => x.id === $("keyProvider").value);
+  const help = $("keyHelp");
+  help.className = "status";
+  help.replaceChildren();
+  if (p && p.console) {
+    const a = el("a", "", new URL(p.console).host);
+    a.href = p.console; a.target = "_blank"; a.rel = "noopener";
+    help.append("Get a key at ", a, ".");
+  } else {
+    help.textContent = "OpenAI, Anthropic, Gemini, xAI, DeepSeek, OpenRouter, Mistral, Groq, Together and Fireworks keys work.";
+  }
+}
+
+function openKey(message = "") {
+  $("keyOverlay").hidden = false;
+  $("keyStatus").className = "status";
+  $("keyStatus").textContent = message;
+  $("keyInput").focus();
+}
+function closeKey() { $("keyOverlay").hidden = true; }
+
+async function loadKey() {
+  try {
+    renderKey(await (await fetch("/settings")).json());
+    if (!keyState.hasKey) openKey();
+  } catch {
+    $("keyChip").hidden = true;
+  }
+}
+
+$("keyChip").addEventListener("click", () => openKey());
+$("keyClose").addEventListener("click", closeKey);
+$("keyOverlay").addEventListener("click", (e) => { if (e.target === $("keyOverlay") && keyState?.hasKey) closeKey(); });
+$("keyProvider").addEventListener("change", keyHelp);
+$("keyBox").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("keySave").disabled = true;
+  $("keyStatus").className = "status";
+  $("keyStatus").textContent = "Checking the key with the provider…";
+  try {
+    renderKey(await call("/settings/key", {
+      apiKey: $("keyInput").value.trim(),
+      provider: $("keyProvider").value || null,
+      model: $("keyModel").value.trim() || null,
+    }));
+    $("keyInput").value = "";
+    closeKey();
+    if (pendingPrompt) { pendingPrompt = false; $("composer").requestSubmit(); }
+  } catch (err) {
+    $("keyStatus").className = "status error";
+    $("keyStatus").textContent = err.message;
+  } finally {
+    $("keySave").disabled = false;
+  }
+});
+$("keyRemove").addEventListener("click", async () => {
+  renderKey(await call("/settings/key", undefined, "DELETE"));
+  openKey("Saved key removed.");
+});
+
+// ---------- chat ----------
+$("prompt").addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && running) { stopGeneration(); return; }
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("composer").requestSubmit(); }
+});
+$("prompt").addEventListener("input", () => {
+  const t = $("prompt");
+  t.style.height = "auto";
+  t.style.height = Math.min(t.scrollHeight, 220) + "px";
+});
+$("stopEditing").addEventListener("click", () => { editing = false; renderComposer(); $("prompt").focus(); });
+$("newModel").addEventListener("click", () => { editing = false; mode = ""; renderComposer(); $("prompt").focus(); });
+
+$("composer").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const text = $("prompt").value.trim();
+  if (!text || busyTimer) return;
+  if (keyState && !keyState.hasKey) {
+    pendingPrompt = true;
+    openKey("Add your API key to generate. Your prompt is kept.");
+    return;
+  }
+  const parent = current && editing ? current.id : null;
+  thread.push({ role: "user", text, mode: mode || null });
+  $("prompt").value = "";
+  $("prompt").style.height = "auto";
+  setBusy(true, parent ? "Changing your model" : "Designing your part", true);
+  saveState();
+  renderChat();
+  const job = running = { id: requestId(), controller: new AbortController(), stopped: false };
+  try {
+    const data = await call("/generate", {
+      prompt: text, mode: mode || null, extraDetails: $("details").checked, parentId: parent, requestId: job.id,
+    }, "POST", job.controller.signal);
+    remember(data);
+    thread.push({ role: "ai", id: data.id, title: data.title, mode: data.mode, model: data.model, seconds: data.seconds,
+      text: parent ? `Updated ${data.title || "the model"}.` : `Built ${data.title || "your model"}.` });
+    setBusy(false);
+    await showBuild(data);
+  } catch (err) {
+    setBusy(false);
+    if (job.stopped) {
+      if (!$("prompt").value) $("prompt").value = text;
+      addAi({ text: "Stopped. Your prompt is back in the box if you want to change it and try again." });
+    } else {
+      addAi({ error: err.message, retry: text });
+    }
+  } finally {
+    if (running === job) running = null;
+  }
+});
+
+function requestId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+}
+
+function stopGeneration() {
+  const job = running;
+  if (!job || job.stopped) return;
+  job.stopped = true;
+  fetch(`/generate/${job.id}/stop`, { method: "POST" }).catch(() => {});
+  job.controller.abort();
+}
+$("stop").addEventListener("click", stopGeneration);
+$("stopBuild").addEventListener("click", stopGeneration);
+
+// ---------- parameters ----------
+$("rebuild").addEventListener("click", async () => {
+  if (!current || busyTimer) return;
+  const params = {};
+  for (const input of $("params").querySelectorAll("input[data-key]")) {
+    params[input.dataset.key] = input.type === "checkbox" ? input.checked : input.type === "text" ? input.value : Number(input.value);
+  }
+  setBusy(true, "Rebuilding");
+  $("paramStatus").className = "status";
+  $("paramStatus").textContent = "Rebuilding. No AI call needed.";
+  try {
+    keepView = true;
+    const data = await call(`/builds/${current.id}/rebuild`, { params });
+    data.model = current.model;
+    remember(data);
+    setBusy(false);
+    await showBuild(data);
+    $("paramStatus").textContent = "Rebuilt.";
+  } catch (err) {
+    setBusy(false);
+    $("paramStatus").className = "status error";
+    $("paramStatus").textContent = err.message;
+  } finally {
+    keepView = false;
+  }
+});
+$("resetParams").addEventListener("click", () => renderParams(current && current.params));
+
+// ---------- viewer controls ----------
+function setTool(tool) {
+  controls.mouseButtons.LEFT = tool === "pan" ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+  controls.mouseButtons.RIGHT = tool === "pan" ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN;
+  controls.touches.ONE = tool === "pan" ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE;
+  for (const b of document.querySelectorAll("[data-tool]")) b.classList.toggle("on", b.dataset.tool === tool);
+  $("hint").textContent = tool === "pan"
+    ? "Left drag: pan · Right drag: rotate · Wheel: zoom to cursor · Double-click: fit"
+    : "Left drag: rotate · Right drag: pan · Wheel: zoom to cursor · Double-click: fit";
+}
+for (const b of document.querySelectorAll("[data-tool]")) b.addEventListener("click", () => setTool(b.dataset.tool));
+for (const b of document.querySelectorAll("[data-view]")) b.addEventListener("click", () => setView(b.dataset.view));
+
+function toggles() {
+  $("orthoBtn").classList.toggle("on", view.ortho);
+  $("edgesBtn").classList.toggle("on", view.edges);
+  $("gridBtn").classList.toggle("on", view.grid);
+  $("xrayBtn").classList.toggle("on", view.xray);
+  $("spinBtn").classList.toggle("on", controls.autoRotate);
+  store.set("view", view);
+}
+$("fitBtn").addEventListener("click", () => frame());
+$("orthoBtn").addEventListener("click", () => { view.ortho = !view.ortho; setCamera(view.ortho ? ortho : persp); toggles(); });
+$("edgesBtn").addEventListener("click", () => { view.edges = !view.edges; applyEdges(); toggles(); });
+$("gridBtn").addEventListener("click", () => { view.grid = !view.grid; applyGrid(); toggles(); });
+$("xrayBtn").addEventListener("click", () => { view.xray = !view.xray; applyMaterials(); toggles(); });
+$("spinBtn").addEventListener("click", () => { controls.autoRotate = !controls.autoRotate; controls.autoRotateSpeed = 1.5; toggles(); });
+$("zoomIn").addEventListener("click", () => zoomBy(0.8));
+$("zoomOut").addEventListener("click", () => zoomBy(1.25));
+$("shotBtn").addEventListener("click", () => {
+  renderer.render(scene, camera);
+  const a = el("a");
+  a.href = renderer.domElement.toDataURL("image/png");
+  a.download = `${(current && current.title) || "textocad"}.png`.replace(/[^\w.\- ]+/g, "");
+  a.click();
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea, select") || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "f") frame();
+  else if (k === "o") $("orthoBtn").click();
+  else if (k === "e") $("edgesBtn").click();
+  else if (k === "g") $("gridBtn").click();
+  else if (k === "x") $("xrayBtn").click();
+  else if (k === "escape" && !$("dlMenu").hidden) $("dlMenu").hidden = true;
+  else if (k === "escape") { if (running) stopGeneration(); else pickPart(null); }
+  else if (k === " " && joints.length) { e.preventDefault(); $("playBtn").click(); }
+  else if (k === "0") setView("iso");
+  else if (k === "1") setView("front");
+  else if (k === "3") setView("right");
+  else if (k === "7") setView("top");
+});
+
+for (const b of document.querySelectorAll("[data-panel]")) {
+  b.addEventListener("click", () => {
+    const target = $(b.dataset.panel);
+    const open = target.hidden;
+    for (const id of ["partsPanel", "lookPanel"]) $(id).hidden = true;
+    target.hidden = !open;
+    for (const x of document.querySelectorAll("[data-panel]")) x.classList.toggle("on", !$(x.dataset.panel).hidden);
+  });
+}
+for (const x of document.querySelectorAll("[data-close]")) {
+  x.addEventListener("click", () => {
+    x.closest(".fpanel").hidden = true;
+    for (const b of document.querySelectorAll("[data-panel]")) b.classList.toggle("on", !$(b.dataset.panel).hidden);
+  });
+}
+$("showAll").addEventListener("click", () => { for (const p of parts) p.object.visible = true; renderParts(); });
+$("isolate").addEventListener("click", () => {
+  if (!picked) return;
+  for (const p of parts) p.object.visible = p === picked;
+  renderParts();
+  frame();
+});
+
+$("playBtn").addEventListener("click", () => {
+  playing = !playing;
+  $("playBtn").textContent = playing ? "❚❚ Pause" : "▶ Play motion";
+});
+$("jointReset").addEventListener("click", () => { stopMotion(); motionTime = 0; for (const j of joints) setJoint(j, Math.min(Math.max(0, j.lo), j.hi)); });
+$("jointsMin").addEventListener("click", () => { store.set("jointsMin", true); renderJoints(); });
+$("moveBtn").addEventListener("click", () => { store.set("jointsMin", false); renderJoints(); });
+
+function lookControls() {
+  for (const l of LIGHTS) $("lighting").add(new Option(l.label, l.id));
+  for (const m of MATERIALS) $("material").add(new Option(m.label, m.id));
+  $("lighting").value = look.lighting;
+  $("material").value = look.material;
+  $("bright").value = look.bright;
+  $("angle").value = look.angle;
+  $("shadows").checked = look.shadows;
+  const labels = () => { $("brightVal").textContent = Math.round(look.bright * 100) + "%"; $("angleVal").textContent = look.angle + "°"; };
+  labels();
+  const save = () => { store.set("look", look); labels(); };
+  $("lighting").addEventListener("change", () => { look.lighting = $("lighting").value; applyLights(); applyMaterials(); save(); });
+  $("bright").addEventListener("input", () => { look.bright = Number($("bright").value); applyLights(); save(); });
+  $("angle").addEventListener("input", () => { look.angle = Number($("angle").value); applyLights(); save(); });
+  $("shadows").addEventListener("change", () => { look.shadows = $("shadows").checked; applyLights(); save(); });
+  $("material").addEventListener("change", () => { look.material = $("material").value; applyMaterials(); save(); });
+  const sw = $("swatches");
+  const paint = () => {
+    sw.replaceChildren();
+    for (const c of SWATCHES) {
+      const b = el("button", look.color === c ? "on" : "");
+      b.type = "button"; b.style.background = c; b.title = c;
+      b.addEventListener("click", () => { look.color = c; for (const p of parts) p.color = null; applyMaterials(); renderParts(); save(); paint(); });
+      sw.append(b);
+    }
+    const reset = el("button", "reset" + (look.color ? "" : " on"), "Part colours");
+    reset.type = "button";
+    reset.addEventListener("click", () => { look.color = null; for (const p of parts) p.color = null; applyMaterials(); renderParts(); save(); paint(); });
+    sw.append(reset);
+  };
+  paint();
+}
+
+for (const b of $("tabs").children) b.addEventListener("click", () => setTab(b.dataset.tab));
+
+const THEMES = {
+  system: ["System theme", '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>'],
+  light: ["Light theme", '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'],
+  dark: ["Dark theme", '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>'],
+};
+const systemLight = matchMedia("(prefers-color-scheme: light)");
+let theme = store.get("theme", "system");
+function applyTheme() {
+  const light = theme === "light" || (theme === "system" && systemLight.matches);
+  document.documentElement.dataset.theme = light ? "light" : "dark";
+  const [label, icon] = THEMES[theme] || THEMES.system;
+  $("themeBtn").innerHTML = icon;
+  $("themeBtn").title = `${label} (click to change)`;
+  applyGrid();
+}
+$("themeBtn").addEventListener("click", () => {
+  const order = ["system", "light", "dark"];
+  theme = order[(order.indexOf(theme) + 1) % order.length];
+  store.set("theme", theme);
+  applyTheme();
+});
+systemLight.addEventListener("change", () => { if (theme === "system") applyTheme(); });
+
+// ---------- start ----------
+const clock = new THREE.Clock();
+function loop() {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (tween) stepTween(dt);
+  if (playing) { motionTime += dt * Number($("speed").value); animateJoints(); }
+  controls.update();
+  renderer.render(scene, camera);
+  drawAxes();
+  requestAnimationFrame(loop);
+}
+applyTheme();
+lookControls();
+renderExamples();
+renderComposer();
+setTool("orbit");
+if (view.ortho) setCamera(ortho);
+toggles();
+applyLights();
+resize();
+loop();
+loadKey();
+const last = builds.get(store.get("current", ""));
+if (last) showBuild(last, { quiet: true }).then(() => setTab("ai", true));
+else renderChat();
+</script>
+</body>
+</html>

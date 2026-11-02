@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Try TextoCAD online
+    url: https://textocad.com
+    about: The hosted editor, no install needed.
+  - name: Report a security problem
+    url: mailto:security@textocad.com
+    about: Please email security issues instead of opening a public issue.

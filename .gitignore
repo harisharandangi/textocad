@@ -1,0 +1,27 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+builds/
+generated_builds/
+*.step
+*.stp
+*.stl
+*.glb
+*.3mf
+.vscode/
+.idea/
+.claude/
+.continue/
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Maintainer notes, never published
+instructions/
